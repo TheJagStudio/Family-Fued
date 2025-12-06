@@ -1,0 +1,5 @@
+{
+  "name": "Family Feud Live",
+  "description": "A real-time Family Feud style quiz application with Admin controls and a synchronized Display board using PeerJS.",
+  "requestFramePermissions": []
+}
