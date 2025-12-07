@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { GameState, INITIAL_STATE, QuizData, Question } from '../types';
 import { AnswerBoard } from './AnswerBoard';
-import { Upload, MonitorPlay, Users, X, ChevronRight, PlayCircle, Eye, RefreshCw, Trophy, Trash2 } from 'lucide-react';
+import { Upload, MonitorPlay, Users, X, ChevronRight, PlayCircle, Eye, RefreshCw, Trophy, Trash2, Ban } from 'lucide-react';
 
 const generateRoomCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -127,6 +127,10 @@ export const AdminPanel: React.FC = () => {
     }, 2500);
   };
 
+  const clearStrikes = () => {
+    setGameState(prev => ({ ...prev, wrongAnswerCount: 0, showWrongOverlay: false }));
+  };
+
   // Assign points to a team AND move to next
   const assignPointsAndNext = (teamIndex: number | null) => {
     setGameState(prev => {
@@ -230,12 +234,23 @@ export const AdminPanel: React.FC = () => {
               <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
                   <h3 className="font-bold text-gray-700 mb-2 uppercase">Round Controls</h3>
                   
-                  <button 
-                    onClick={triggerWrongAnswer}
-                    className="w-full mb-6 bg-red-600 hover:bg-red-700 text-white p-4 rounded-lg shadow font-bold flex items-center justify-center gap-2 transition active:scale-95"
-                  >
-                        <X size={24} /> STRIKE ({gameState.wrongAnswerCount})
-                  </button>
+                  <div className="flex gap-2 mb-6">
+                      <button 
+                        onClick={triggerWrongAnswer}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white p-4 rounded-lg shadow font-bold flex items-center justify-center gap-2 transition active:scale-95"
+                      >
+                            <X size={24} /> STRIKE ({gameState.wrongAnswerCount})
+                      </button>
+                      
+                      <button 
+                        onClick={clearStrikes}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 rounded-lg shadow font-bold flex flex-col items-center justify-center transition active:scale-95 text-xs"
+                        title="Clear Strikes / Reset Xs"
+                      >
+                            <Ban size={20} className="mb-1" />
+                            CLEAR Xs
+                      </button>
+                  </div>
 
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                     <h4 className="text-sm font-bold text-blue-900 mb-2 uppercase flex justify-between items-center">
