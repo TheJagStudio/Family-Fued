@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { GameState, INITIAL_STATE, QuizData, Question } from '../types';
 import { AnswerBoard } from './AnswerBoard';
-import { Upload, MonitorPlay, Users, X, ChevronRight, PlayCircle, Eye, RefreshCw, Trophy, Trash2, Ban } from 'lucide-react';
+import { Upload, MonitorPlay, Users, X, ChevronRight, PlayCircle, Eye, RefreshCw, Trophy, Trash2, Ban, Edit2, Check } from 'lucide-react';
 
 const generateRoomCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -22,6 +22,10 @@ export const AdminPanel: React.FC = () => {
   const [connections, setConnections] = useState<DataConnection[]>([]);
   const [gameState, setGameState] = useState<GameState>(INITIAL_STATE);
   const [jsonError, setJsonError] = useState<string>('');
+  
+  // Score Editing State
+  const [editingTeam, setEditingTeam] = useState<number | null>(null);
+  const [editScoreValue, setEditScoreValue] = useState<string>('');
 
   // Initialize Peer
   useEffect(() => {
@@ -167,6 +171,24 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
+  // Score Editing Handlers
+  const startEditing = (index: number, currentScore: number) => {
+    setEditingTeam(index);
+    setEditScoreValue(currentScore.toString());
+  };
+
+  const saveScore = (index: number) => {
+    const newScore = parseInt(editScoreValue, 10);
+    if (!isNaN(newScore)) {
+      setGameState(prev => {
+        const newScores = [...prev.teamScores];
+        newScores[index] = newScore;
+        return { ...prev, teamScores: newScores };
+      });
+    }
+    setEditingTeam(null);
+  };
+
   const currentQ = gameState.questions[gameState.currentQuestionIndex];
   
   // Calculate current round total for display
@@ -298,6 +320,52 @@ export const AdminPanel: React.FC = () => {
                       </ul>
                   </div>
               </div>
+          )}
+
+          {/* Score Management - Visible whenever game is loaded */}
+          {gameState.questions.length > 0 && (
+             <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-indigo-500">
+                 <h3 className="font-bold text-gray-700 mb-4 uppercase flex items-center justify-between">
+                     <span className="flex items-center gap-2"><Trophy size={20} className="text-indigo-600"/> Scoreboard</span>
+                     <span className="text-xs font-normal text-gray-400 lowercase">click pencil to edit</span>
+                 </h3>
+                 <div className="space-y-3">
+                     {gameState.teamScores.map((score, idx) => (
+                         <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded border hover:border-indigo-200 transition-colors">
+                             <span className="font-bold text-gray-700 text-sm">Team {idx + 1}</span>
+                             
+                             {editingTeam === idx ? (
+                                 <div className="flex items-center gap-2">
+                                     <input 
+                                         type="number" 
+                                         value={editScoreValue}
+                                         onChange={(e) => setEditScoreValue(e.target.value)}
+                                         onKeyDown={(e) => {
+                                             if(e.key === 'Enter') saveScore(idx);
+                                             if(e.key === 'Escape') setEditingTeam(null);
+                                         }}
+                                         className="w-24 p-1 text-sm border border-indigo-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+                                         autoFocus
+                                     />
+                                     <button onClick={() => saveScore(idx)} className="text-green-600 hover:text-green-700 p-1 hover:bg-green-50 rounded"><Check size={18} /></button>
+                                     <button onClick={() => setEditingTeam(null)} className="text-red-500 hover:text-red-600 p-1 hover:bg-red-50 rounded"><X size={18} /></button>
+                                 </div>
+                             ) : (
+                                 <div className="flex items-center gap-3">
+                                     <span className="font-mono text-xl font-bold text-indigo-900">{score}</span>
+                                     <button 
+                                         onClick={() => startEditing(idx, score)}
+                                         className="text-gray-400 hover:text-blue-600 transition-colors p-1 hover:bg-blue-50 rounded"
+                                         title="Edit Score"
+                                     >
+                                         <Edit2 size={16} />
+                                     </button>
+                                 </div>
+                             )}
+                         </div>
+                     ))}
+                 </div>
+             </div>
           )}
           
           <button onClick={resetGame} className="text-red-500 text-sm flex items-center gap-1 hover:underline"><RefreshCw size={14}/> Reset Everything</button>
