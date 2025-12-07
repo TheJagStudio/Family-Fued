@@ -1,3 +1,4 @@
+
 export interface Answer {
   text: string;
   points: number;
@@ -20,6 +21,7 @@ export interface GameState {
   questions: Question[];
   wrongAnswerCount: number; // For the current round (0, 1, 2, 3)
   showWrongOverlay: boolean; // Triggers the visual "X"
+  teamScores: number[]; // Scores for Team 1-6
 }
 
 export type PeerMessage = 
@@ -33,4 +35,5 @@ export const INITIAL_STATE: GameState = {
   questions: [],
   wrongAnswerCount: 0,
   showWrongOverlay: false,
+  teamScores: [0, 0, 0, 0, 0, 0],
 };

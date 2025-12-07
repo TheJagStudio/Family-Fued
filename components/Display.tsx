@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { GameState, INITIAL_STATE, PeerMessage } from '../types';
 import { AnswerBoard } from './AnswerBoard';
 import { WrongOverlay } from './WrongOverlay';
-import { Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff, Trophy } from 'lucide-react';
 
 const PEER_PREFIX = 'ff-quiz-';
 
@@ -78,6 +79,53 @@ export const Display: React.FC = () => {
     };
   }, [peer]);
 
+  // Determine Winner
+  const getWinner = () => {
+      const maxScore = Math.max(...gameState.teamScores);
+      // Determine indices of all teams with maxScore
+      const winners = gameState.teamScores
+        .map((score, index) => score === maxScore ? index + 1 : null)
+        .filter((val) => val !== null);
+      
+      return { winners, maxScore };
+  };
+
+  const renderVictory = () => {
+    const { winners, maxScore } = getWinner();
+    const isDraw = winners.length > 1;
+
+    // Create 50 confetti particles
+    const confettiParticles = Array.from({ length: 50 }).map((_, i) => (
+       <div 
+         key={i}
+         className="confetti-piece"
+         style={{
+            left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 2}s`,
+            backgroundColor: ['#facc15', '#ef4444', '#3b82f6', '#ffffff'][Math.floor(Math.random() * 4)]
+         }}
+       />
+    ));
+
+    return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-950 overflow-hidden z-20">
+            {confettiParticles}
+            <div className="animate-pop-in text-center relative z-10 p-8 border-8 border-yellow-400 bg-blue-900 rounded-3xl shadow-2xl max-w-2xl mx-4">
+                 <Trophy className="w-32 h-32 text-yellow-400 mx-auto mb-6 drop-shadow-lg" />
+                 <h1 className="text-6xl md:text-8xl font-display text-white mb-2 tracking-widest uppercase">
+                    {isDraw ? "DRAW!" : "WINNER!"}
+                 </h1>
+                 <div className="bg-yellow-400 text-blue-900 px-8 py-4 rounded-xl inline-block mt-4 transform -rotate-2">
+                     <span className="text-4xl md:text-6xl font-condensed font-bold uppercase">
+                         {isDraw ? "TEAMS " + winners.join(" & ") : "TEAM " + winners[0]}
+                     </span>
+                 </div>
+                 <p className="text-blue-200 mt-8 text-2xl font-condensed">TOTAL SCORE: {maxScore}</p>
+            </div>
+        </div>
+    );
+  };
+
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-blue-900 flex items-center justify-center p-4">
@@ -132,15 +180,13 @@ export const Display: React.FC = () => {
             </p>
           </div>
         ) : gameState.status === 'FINISHED' ? (
-           <div className="text-center">
-            <h1 className="text-6xl font-display text-yellow-400 mb-4">GAME OVER</h1>
-            <p className="text-white text-2xl">Thanks for playing!</p>
-           </div>
+           renderVictory()
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <AnswerBoard 
                 question={gameState.questions[gameState.currentQuestionIndex]} 
                 wrongAnswerCount={gameState.wrongAnswerCount}
+                teamScores={gameState.teamScores}
             />
           </div>
         )}

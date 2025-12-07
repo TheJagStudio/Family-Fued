@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { GameState, INITIAL_STATE, QuizData, Question } from '../types';
 import { AnswerBoard } from './AnswerBoard';
-import { Upload, MonitorPlay, Users, X, ChevronRight, PlayCircle, Eye, RefreshCw } from 'lucide-react';
+import { Upload, MonitorPlay, Users, X, ChevronRight, PlayCircle, Eye, RefreshCw, Trophy, Trash2 } from 'lucide-react';
 
 const generateRoomCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -91,7 +92,8 @@ export const AdminPanel: React.FC = () => {
           status: 'WAITING',
           questions: questions,
           currentQuestionIndex: 0,
-          wrongAnswerCount: 0
+          wrongAnswerCount: 0,
+          teamScores: [0, 0, 0, 0, 0, 0]
         }));
         setJsonError('');
       } catch (err: any) {
@@ -119,39 +121,37 @@ export const AdminPanel: React.FC = () => {
        if(conn.open) conn.send({ type: 'SHOW_WRONG', payload: true });
     });
 
-    // Reset overlay state after duration and check for auto-reset of strikes
+    // Reset overlay state after duration
     setTimeout(() => {
-      setGameState(prev => {
-        const newState = { ...prev, showWrongOverlay: false };
-        // Auto-reset strikes if reached 3, so play can continue (e.g., steal attempt or next team)
-        if (prev.wrongAnswerCount >= 3) {
-            newState.wrongAnswerCount = 0;
-            
-            // Also reset score by hiding all answers for the current question
-            const newQuestions = [...prev.questions];
-            const currentQ = newQuestions[prev.currentQuestionIndex];
-            newQuestions[prev.currentQuestionIndex] = {
-                ...currentQ,
-                answers: currentQ.answers.map(a => ({ ...a, revealed: false }))
-            };
-            newState.questions = newQuestions;
-        }
-        return newState;
-      });
+      setGameState(prev => ({ ...prev, showWrongOverlay: false }));
     }, 2500);
   };
 
-  const nextQuestion = () => {
-    if (gameState.currentQuestionIndex < gameState.questions.length - 1) {
-      setGameState(prev => ({
-        ...prev,
-        currentQuestionIndex: prev.currentQuestionIndex + 1,
-        wrongAnswerCount: 0,
-        showWrongOverlay: false
-      }));
-    } else {
-        setGameState(prev => ({ ...prev, status: 'FINISHED' }));
-    }
+  // Assign points to a team AND move to next
+  const assignPointsAndNext = (teamIndex: number | null) => {
+    setGameState(prev => {
+        const currentQ = prev.questions[prev.currentQuestionIndex];
+        const roundPoints = currentQ.answers
+            .filter(a => a.revealed)
+            .reduce((acc, curr) => acc + curr.points, 0);
+        
+        const newTeamScores = [...prev.teamScores];
+        if (teamIndex !== null) {
+            newTeamScores[teamIndex] += roundPoints;
+        }
+
+        const nextIndex = prev.currentQuestionIndex + 1;
+        const isFinished = nextIndex >= prev.questions.length;
+
+        return {
+            ...prev,
+            teamScores: newTeamScores,
+            currentQuestionIndex: isFinished ? prev.currentQuestionIndex : nextIndex,
+            status: isFinished ? 'FINISHED' : 'ACTIVE',
+            wrongAnswerCount: 0,
+            showWrongOverlay: false
+        };
+    });
   };
   
   const resetGame = () => {
@@ -164,6 +164,11 @@ export const AdminPanel: React.FC = () => {
   };
 
   const currentQ = gameState.questions[gameState.currentQuestionIndex];
+  
+  // Calculate current round total for display
+  const currentRoundTotal = currentQ?.answers
+    .filter(a => a.revealed)
+    .reduce((acc, curr) => acc + curr.points, 0) || 0;
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -203,7 +208,6 @@ export const AdminPanel: React.FC = () => {
                         {gameState.questions.length > 0 && <span className="text-green-600 text-sm font-bold">Loaded!</span>}
                     </div>
                     {jsonError && <p className="text-red-500 text-xs mt-1">{jsonError}</p>}
-                    <p className="text-xs text-gray-400 mt-2">Format: <code>{`{ "questions": [{ "text": "...", "answers": [{"text":"...", "points":10}] }] }`}</code></p>
                 </div>
 
                 <div className="pt-4 border-t border-gray-200">
@@ -224,24 +228,43 @@ export const AdminPanel: React.FC = () => {
           {/* Gameplay Controls */}
           {gameState.status === 'ACTIVE' && (
               <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                  <h3 className="font-bold text-gray-700 mb-4 uppercase">Round Controls</h3>
+                  <h3 className="font-bold text-gray-700 mb-2 uppercase">Round Controls</h3>
                   
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                      <button 
-                        onClick={triggerWrongAnswer}
-                        className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-lg shadow font-bold flex flex-col items-center justify-center gap-1 transition active:scale-95"
-                      >
-                         <X size={32} /> STRIKE ({gameState.wrongAnswerCount})
-                      </button>
-                      <button 
-                        onClick={nextQuestion}
-                        className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg shadow font-bold flex flex-col items-center justify-center gap-1 transition active:scale-95"
-                      >
-                         <ChevronRight size={32} /> NEXT
-                      </button>
+                  <button 
+                    onClick={triggerWrongAnswer}
+                    className="w-full mb-6 bg-red-600 hover:bg-red-700 text-white p-4 rounded-lg shadow font-bold flex items-center justify-center gap-2 transition active:scale-95"
+                  >
+                        <X size={24} /> STRIKE ({gameState.wrongAnswerCount})
+                  </button>
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="text-sm font-bold text-blue-900 mb-2 uppercase flex justify-between items-center">
+                        Assign Points & Next
+                        <span className="text-yellow-600 text-lg">{currentRoundTotal} pts</span>
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-3">Click a team to give them {currentRoundTotal} points and start the next round.</p>
+                    
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                        {gameState.teamScores.map((score, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => assignPointsAndNext(idx)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-1 rounded shadow text-sm font-bold transition active:scale-95"
+                            >
+                                Team {idx + 1}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={() => assignPointsAndNext(null)}
+                        className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 rounded shadow text-sm font-bold flex justify-center items-center gap-2"
+                    >
+                        <Trash2 size={16} /> No Points / Next Question
+                    </button>
                   </div>
 
-                  <div className="p-3 bg-gray-50 rounded border border-gray-200">
+                  <div className="mt-6 p-3 bg-gray-50 rounded border border-gray-200">
                       <div className="text-xs text-gray-500 uppercase font-bold mb-2">Cheat Sheet</div>
                       <ul className="space-y-2">
                           {currentQ?.answers.map((ans, idx) => (
@@ -285,6 +308,7 @@ export const AdminPanel: React.FC = () => {
                           wrongAnswerCount={gameState.wrongAnswerCount}
                           isAdmin={true}
                           onReveal={handleReveal}
+                          teamScores={gameState.teamScores}
                        />
                    </div>
                )}
