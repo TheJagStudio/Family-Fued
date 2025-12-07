@@ -126,6 +126,15 @@ export const AdminPanel: React.FC = () => {
         // Auto-reset strikes if reached 3, so play can continue (e.g., steal attempt or next team)
         if (prev.wrongAnswerCount >= 3) {
             newState.wrongAnswerCount = 0;
+            
+            // Also reset score by hiding all answers for the current question
+            const newQuestions = [...prev.questions];
+            const currentQ = newQuestions[prev.currentQuestionIndex];
+            newQuestions[prev.currentQuestionIndex] = {
+                ...currentQ,
+                answers: currentQ.answers.map(a => ({ ...a, revealed: false }))
+            };
+            newState.questions = newQuestions;
         }
         return newState;
       });

@@ -9,8 +9,14 @@ interface BoardProps {
 }
 
 export const AnswerBoard: React.FC<BoardProps> = ({ question, wrongAnswerCount = 0, isAdmin, onReveal }) => {
-  // Standard Family Feud board has 8 slots (4 left, 4 right) usually
-  const TOTAL_SLOTS = 8;
+  // Determine how many slots to show
+  // If no question is active (e.g. idle state), show 8 placeholder slots
+  // Otherwise, show exactly as many slots as there are answers
+  const answerCount = question?.answers.length || 0;
+  const totalSlots = question ? answerCount : 8;
+  
+  // Split answers into two columns
+  const splitIndex = Math.ceil(totalSlots / 2);
   
   const renderSlot = (index: number) => {
     const answer = question?.answers[index];
@@ -66,9 +72,12 @@ export const AnswerBoard: React.FC<BoardProps> = ({ question, wrongAnswerCount =
     );
   };
 
-  // Split into left and right columns
-  const leftCol = Array.from({ length: 4 }).map((_, i) => renderSlot(i));
-  const rightCol = Array.from({ length: 4 }).map((_, i) => renderSlot(i + 4));
+  // Generate indices for left and right columns
+  const leftIndices = Array.from({ length: splitIndex }).map((_, i) => i);
+  const rightIndices = Array.from({ length: totalSlots - splitIndex }).map((_, i) => i + splitIndex);
+
+  const leftCol = leftIndices.map(i => renderSlot(i));
+  const rightCol = rightIndices.map(i => renderSlot(i));
 
   return (
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
