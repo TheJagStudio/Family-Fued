@@ -4,8 +4,19 @@ import { GameState, INITIAL_STATE, QuizData, Question } from '../types';
 import { AnswerBoard } from './AnswerBoard';
 import { Upload, MonitorPlay, Users, X, ChevronRight, PlayCircle, Eye, RefreshCw } from 'lucide-react';
 
+const generateRoomCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+const PEER_PREFIX = 'ff-quiz-';
+
 export const AdminPanel: React.FC = () => {
-  const [peerId, setPeerId] = useState<string>('');
+  const [roomCode, setRoomCode] = useState<string>('');
   const [peer, setPeer] = useState<Peer | null>(null);
   const [connections, setConnections] = useState<DataConnection[]>([]);
   const [gameState, setGameState] = useState<GameState>(INITIAL_STATE);
@@ -13,9 +24,15 @@ export const AdminPanel: React.FC = () => {
 
   // Initialize Peer
   useEffect(() => {
-    const newPeer = new Peer();
+    const code = generateRoomCode();
+    setRoomCode(code);
+    
+    const fullId = `${PEER_PREFIX}${code}`;
+    const newPeer = new Peer(fullId);
+
     newPeer.on('open', (id) => {
-      setPeerId(id);
+      console.log('My peer ID is: ' + id);
+      // We rely on our local 'code' state for display, assuming registration succeeded
     });
 
     newPeer.on('connection', (conn) => {
@@ -28,6 +45,13 @@ export const AdminPanel: React.FC = () => {
       conn.on('close', () => {
         setConnections(prev => prev.filter(c => c.peer !== conn.peer));
       });
+    });
+
+    newPeer.on('error', (err) => {
+        console.error("Peer error:", err);
+        if (err.type === 'unavailable-id') {
+            alert('Room Code collision. Please refresh to generate a new code.');
+        }
     });
 
     setPeer(newPeer);
@@ -120,7 +144,6 @@ export const AdminPanel: React.FC = () => {
               ...INITIAL_STATE,
               status: 'IDLE'
           });
-          // Keep questions if we want, but let's do hard reset to force re-upload or re-init
       }
   };
 
@@ -135,7 +158,7 @@ export const AdminPanel: React.FC = () => {
           </h1>
           <div className="flex items-center gap-4 text-sm font-condensed">
              <div className="bg-blue-800 px-3 py-1 rounded border border-blue-600">
-               ROOM CODE: <span className="text-yellow-400 font-mono text-lg ml-2 select-all">{peerId || 'Generating...'}</span>
+               ROOM CODE: <span className="text-yellow-400 font-mono text-xl ml-2 select-all font-bold tracking-widest">{roomCode || '...'}</span>
              </div>
              <div className="flex items-center gap-2">
                <Users size={16} />

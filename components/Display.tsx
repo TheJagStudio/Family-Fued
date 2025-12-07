@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { GameState, INITIAL_STATE, PeerMessage } from '../types';
 import { AnswerBoard } from './AnswerBoard';
 import { WrongOverlay } from './WrongOverlay';
 import { Wifi, WifiOff } from 'lucide-react';
+
+const PEER_PREFIX = 'ff-quiz-';
 
 export const Display: React.FC = () => {
   const [roomId, setRoomId] = useState('');
@@ -22,7 +24,11 @@ export const Display: React.FC = () => {
     const newPeer = new Peer();
     
     newPeer.on('open', () => {
-      const connection = newPeer.connect(roomId);
+      // User types "ABCDEF", we connect to "ff-quiz-ABCDEF"
+      const fullId = `${PEER_PREFIX}${roomId.toUpperCase()}`;
+      console.log('Connecting to:', fullId);
+      
+      const connection = newPeer.connect(fullId);
       
       connection.on('open', () => {
         setIsConnected(true);
@@ -85,15 +91,18 @@ export const Display: React.FC = () => {
                 <input 
                   type="text" 
                   value={roomId}
-                  onChange={(e) => setRoomId(e.target.value)}
-                  className="w-full text-2xl font-mono text-center p-3 border-2 border-gray-300 rounded focus:border-blue-600 outline-none uppercase"
-                  placeholder="Enter Code"
+                  onChange={(e) => setRoomId(e.target.value.toUpperCase())}
+                  maxLength={6}
+                  className="w-full text-4xl font-mono text-center p-3 border-2 border-gray-300 rounded focus:border-blue-600 outline-none uppercase tracking-widest placeholder:text-gray-300 placeholder:text-2xl"
+                  placeholder="6-DIGIT CODE"
                 />
               </div>
               {errorMsg && <p className="text-red-500 text-center text-sm font-bold">{errorMsg}</p>}
               <button 
                 type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded text-xl uppercase tracking-widest shadow-lg transition-transform active:scale-95"
+                disabled={roomId.length < 6}
+                className={`w-full font-bold py-4 rounded text-xl uppercase tracking-widest shadow-lg transition-transform active:scale-95
+                   ${roomId.length < 6 ? 'bg-gray-400 cursor-not-allowed text-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
               >
                 Connect
               </button>
