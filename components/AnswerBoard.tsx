@@ -3,11 +3,12 @@ import { Answer, Question } from '../types';
 
 interface BoardProps {
   question: Question | null;
+  wrongAnswerCount?: number;
   isAdmin?: boolean;
   onReveal?: (answerIndex: number) => void;
 }
 
-export const AnswerBoard: React.FC<BoardProps> = ({ question, isAdmin, onReveal }) => {
+export const AnswerBoard: React.FC<BoardProps> = ({ question, wrongAnswerCount = 0, isAdmin, onReveal }) => {
   // Standard Family Feud board has 8 slots (4 left, 4 right) usually
   const TOTAL_SLOTS = 8;
   
@@ -88,14 +89,39 @@ export const AnswerBoard: React.FC<BoardProps> = ({ question, isAdmin, onReveal 
         </div>
       </div>
       
-      {/* Total Score (Optional visual filler) */}
+      {/* Footer Info: Score and Strikes */}
       {question && (
-        <div className="mt-8 flex justify-center">
-          <div className="bg-blue-900 border-4 border-yellow-400 px-12 py-4 rounded-full shadow-lg">
-             <span className="text-yellow-400 font-display text-4xl tracking-widest">
-               TOTAL: {question.answers.filter(a => a.revealed).reduce((acc, curr) => acc + curr.points, 0)}
-             </span>
-          </div>
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            {/* Spacer for layout balance */}
+            <div className="hidden md:block"></div>
+            
+            {/* Total Score - Centered */}
+            <div className="flex justify-center">
+              <div className="bg-blue-900 border-4 border-yellow-400 px-12 py-4 rounded-full shadow-lg whitespace-nowrap">
+                 <span className="text-yellow-400 font-display text-4xl tracking-widest">
+                   TOTAL: {question.answers.filter(a => a.revealed).reduce((acc, curr) => acc + curr.points, 0)}
+                 </span>
+              </div>
+            </div>
+
+            {/* Strikes - Right Aligned */}
+            <div className="flex justify-center md:justify-end">
+                <div className="flex gap-3 bg-black/40 p-3 rounded-xl border-2 border-blue-800">
+                    {[1, 2, 3].map((num) => (
+                        <div 
+                            key={num} 
+                            className={`w-12 h-12 flex items-center justify-center rounded border-2 transition-all duration-300
+                                ${wrongAnswerCount >= num 
+                                    ? 'bg-red-600 border-red-400 shadow-[0_0_15px_rgba(220,38,38,0.7)] scale-110' 
+                                    : 'bg-blue-950/30 border-blue-900/50'}`}
+                        >
+                            {wrongAnswerCount >= num && (
+                                <span className="text-white font-display text-3xl drop-shadow-md">X</span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
       )}
     </div>

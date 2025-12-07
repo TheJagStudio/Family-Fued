@@ -111,7 +111,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const triggerWrongAnswer = () => {
-    // Show X overlay
+    // Show X overlay and increment count
     setGameState(prev => ({ ...prev, showWrongOverlay: true, wrongAnswerCount: prev.wrongAnswerCount + 1 }));
     
     // Broadcast specialized message for immediate animation trigger
@@ -119,10 +119,17 @@ export const AdminPanel: React.FC = () => {
        if(conn.open) conn.send({ type: 'SHOW_WRONG', payload: true });
     });
 
-    // Reset overlay state after duration (purely for state consistency, display handles animation duration)
+    // Reset overlay state after duration and check for auto-reset of strikes
     setTimeout(() => {
-      setGameState(prev => ({ ...prev, showWrongOverlay: false }));
-    }, 2000);
+      setGameState(prev => {
+        const newState = { ...prev, showWrongOverlay: false };
+        // Auto-reset strikes if reached 3, so play can continue (e.g., steal attempt or next team)
+        if (prev.wrongAnswerCount >= 3) {
+            newState.wrongAnswerCount = 0;
+        }
+        return newState;
+      });
+    }, 2500);
   };
 
   const nextQuestion = () => {
@@ -266,6 +273,7 @@ export const AdminPanel: React.FC = () => {
                    <div className="w-full transform scale-75 md:scale-90 origin-top">
                        <AnswerBoard 
                           question={gameState.questions[gameState.currentQuestionIndex]} 
+                          wrongAnswerCount={gameState.wrongAnswerCount}
                           isAdmin={true}
                           onReveal={handleReveal}
                        />

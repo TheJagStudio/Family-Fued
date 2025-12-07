@@ -138,7 +138,10 @@ export const Display: React.FC = () => {
            </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <AnswerBoard question={gameState.questions[gameState.currentQuestionIndex]} />
+            <AnswerBoard 
+                question={gameState.questions[gameState.currentQuestionIndex]} 
+                wrongAnswerCount={gameState.wrongAnswerCount}
+            />
           </div>
         )}
       </div>
